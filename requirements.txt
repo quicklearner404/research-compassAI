@@ -1,0 +1,7 @@
+streamlit
+smolagents
+python-dotenv
+requests
+arxiv
+duckduckgo-search
+PyGithub
