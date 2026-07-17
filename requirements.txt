@@ -10,3 +10,4 @@ duckduckgo-search>=8.0.0
 PyGithub>=2.6.0
 
 pydantic>=2.11.0
+pytest>=8.3.0
