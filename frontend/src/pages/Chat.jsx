@@ -1,27 +1,48 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { getSession } from "../services/api";
+
+import { getSession, getMessages, createMessage } from "../services/api";
+
+import ChatHeader from "../components/chat/ChatHeader";
+import MessageList from "../components/chat/MessageList";
+import MessageInput from "../components/chat/MessageInput";
 
 export default function Chat() {
   const { sessionId } = useParams();
 
   const [session, setSession] = useState(null);
+  const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function loadSession() {
-      try {
-        const data = await getSession(sessionId);
-        setSession(data);
-      } catch (error) {
-        console.error(error);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    loadSession();
+    loadConversation();
   }, [sessionId]);
+
+  async function loadConversation() {
+    try {
+      const sessionData = await getSession(sessionId);
+      const messageData = await getMessages(sessionId);
+
+      setSession(sessionData);
+      setMessages(Array.isArray(messageData) ? messageData : []);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleSend(text) {
+    try {
+      const createdMessage = await createMessage(sessionId, "user", text);
+      const updatedMessages = await getMessages(sessionId);
+
+      setMessages(Array.isArray(updatedMessages) ? updatedMessages : [createdMessage]);
+    } catch (error) {
+      console.error(error);
+      alert("Failed to send message.");
+    }
+  }
 
   if (loading) {
     return (
@@ -31,21 +52,23 @@ export default function Chat() {
     );
   }
 
+  if (!session) {
+    return (
+      <div className="flex h-screen items-center justify-center text-slate-600">
+        Unable to load this conversation.
+      </div>
+    );
+  }
+
   return (
-    <div className="p-10">
+    <div className="flex h-screen flex-col bg-slate-50">
+      <ChatHeader title={session.title || "Conversation"} />
 
-      <h1 className="text-4xl font-bold">
-        {session.title}
-      </h1>
-
-      <p className="mt-2 text-slate-500">
-        Session #{session.id}
-      </p>
-
-      <div className="mt-12 rounded-xl border border-dashed border-slate-300 p-8 text-center text-slate-500">
-        Chat interface coming next...
+      <div className="flex-1 overflow-y-auto">
+        <MessageList messages={messages} />
       </div>
 
+      <MessageInput onSend={handleSend} />
     </div>
   );
 }

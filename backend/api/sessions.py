@@ -4,6 +4,8 @@ from schemas.session import SessionCreate, SessionResponse
 from dependencies import get_db
 from models.session import Session as ResearchSession
 from fastapi import HTTPException
+from models.message import Message
+from schemas.message import MessageCreate, MessageResponse
 router = APIRouter(
     prefix="/sessions",
     tags=["Sessions"]
@@ -51,3 +53,50 @@ def get_session(
         )
 
     return session
+@router.post(
+    "/{session_id}/messages",
+    response_model=MessageResponse
+)
+def create_message(
+    session_id: int,
+    message: MessageCreate,
+    db: Session = Depends(get_db)
+):
+    # Make sure the session exists
+    session = (
+        db.query(ResearchSession)
+        .filter(ResearchSession.id == session_id)
+        .first()
+    )
+
+    if session is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Session not found"
+        )
+
+    db_message = Message(
+        session_id=session_id,
+        role=message.role,
+        content=message.content
+    )
+
+    db.add(db_message)
+    db.commit()
+    db.refresh(db_message)
+
+    return db_message
+@router.get(
+    "/{session_id}/messages",
+    response_model=list[MessageResponse]
+)
+def get_messages(
+    session_id: int,
+    db: Session = Depends(get_db)
+):
+    return (
+        db.query(Message)
+        .filter(Message.session_id == session_id)
+        .order_by(Message.created_at.asc())
+        .all()
+    )
