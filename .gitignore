@@ -29,3 +29,7 @@ venv/
 # Build
 dist/
 build/
+
+# ---------- Database ----------
+backend/research_compass.db
+*.db
