@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from models.tool_result import ToolResult
+from backend.models.tool_result import ToolResult
 
 
 class BaseTool(ABC):

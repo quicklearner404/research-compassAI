@@ -1,7 +1,7 @@
 from arxiv import Client, Search, SortCriterion
 
-from agent_tools.base_tool import BaseTool
-from models.tool_result import ToolResult
+from backend.agent_tools.base_tool import BaseTool
+from backend.models.tool_result import ToolResult
 
 
 class ArxivTool(BaseTool):

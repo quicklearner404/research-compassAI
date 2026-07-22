@@ -1,7 +1,7 @@
 from duckduckgo_search import DDGS
 
-from agent_tools.base_tool import BaseTool
-from models.tool_result import ToolResult
+from backend.agent_tools.base_tool import BaseTool
+from backend.models.tool_result import ToolResult
 
 
 class WebSearchTool(BaseTool):

@@ -1,11 +1,9 @@
-from agent.agent import ResearchAgent
+from backend.agent.agent import ResearchAgent
 
 agent = ResearchAgent()
 
-response = agent.run(
-    "I want to learn Graph Neural Networks from scratch. Give me the best papers, GitHub repositories, and tutorials."
+result = agent.run(
+    "Find three recent Vision Transformer papers on arXiv."
 )
 
-print("\n" + "=" * 80)
-print(response)
-print("=" * 80)
+print(result)

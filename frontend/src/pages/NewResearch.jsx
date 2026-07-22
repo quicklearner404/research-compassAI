@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { createSession } from "../services/api";
+import { chat, createSession } from "../services/api";
 
 export default function NewResearch() {
   const [prompt, setPrompt] = useState("");
@@ -14,7 +14,8 @@ export default function NewResearch() {
     try {
       setLoading(true);
 
-      const session = await createSession(prompt);
+      const session = await createSession("New Research");
+      await chat(session.id, prompt);
 
       navigate(`/chat/${session.id}`);
 

@@ -1,8 +1,8 @@
 from smolagents import Tool
 
-from agent_tools.arxiv_tool import ArxivTool
-from agent_tools.github_tool import GitHubTool
-from agent_tools.web_search_tool import WebSearchTool
+from backend.agent_tools.arxiv_tool import ArxivTool
+from backend.agent_tools.github_tool import GitHubTool
+from backend.agent_tools.web_search_tool import WebSearchTool
 
 
 class ArxivSearchTool(Tool):

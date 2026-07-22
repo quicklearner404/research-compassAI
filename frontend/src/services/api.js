@@ -65,3 +65,23 @@ export async function createMessage(sessionId, role, content) {
 
   return response.json();
 }
+export async function chat(sessionId, query) {
+  const response = await fetch(
+    `${BASE_URL}/sessions/${sessionId}/chat`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        query,
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error("Chat request failed");
+  }
+
+  return response.json();
+}

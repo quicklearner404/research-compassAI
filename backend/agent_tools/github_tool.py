@@ -1,9 +1,8 @@
 from github import Github, GithubException, Auth
 
-from agent_tools.base_tool import BaseTool
-from models.tool_result import ToolResult
+from backend.agent_tools.base_tool import BaseTool
+from backend.models.tool_result import ToolResult
 from config import GITHUB_TOKEN
-
 
 class GitHubTool(BaseTool):
     """
@@ -13,9 +12,14 @@ class GitHubTool(BaseTool):
     def __init__(self, max_results: int = 3):
         from github import Github, Auth
 
+        self.max_results = max_results
+
+        if not GITHUB_TOKEN:
+            self.github = Github()
+            return
+
         auth = Auth.Token(GITHUB_TOKEN)
         self.github = Github(auth=auth)
-        self.max_results = max_results
 
     def run(self, query: str) -> ToolResult:
 

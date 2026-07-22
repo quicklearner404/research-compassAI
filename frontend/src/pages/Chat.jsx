@@ -1,8 +1,11 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 
-import { getSession, getMessages, createMessage } from "../services/api";
-
+import {
+  getSession,
+  getMessages,
+  chat,
+} from "../services/api";
 import ChatHeader from "../components/chat/ChatHeader";
 import MessageList from "../components/chat/MessageList";
 import MessageInput from "../components/chat/MessageInput";
@@ -32,17 +35,24 @@ export default function Chat() {
     }
   }
 
-  async function handleSend(text) {
-    try {
-      const createdMessage = await createMessage(sessionId, "user", text);
-      const updatedMessages = await getMessages(sessionId);
+async function handleSend(text) {
 
-      setMessages(Array.isArray(updatedMessages) ? updatedMessages : [createdMessage]);
+    try {
+
+        await chat(sessionId, text);
+
     } catch (error) {
-      console.error(error);
-      alert("Failed to send message.");
+
+        console.error(error);
+
     }
-  }
+
+    const updatedMessages =
+        await getMessages(sessionId);
+
+    setMessages(updatedMessages);
+
+}
 
   if (loading) {
     return (
