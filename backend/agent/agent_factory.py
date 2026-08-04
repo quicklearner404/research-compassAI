@@ -9,5 +9,5 @@ def build_agent(model):
         tools=get_tools(),
         model=model,
         instructions=SYSTEM_PROMPT,
-        max_steps=6,
+        max_steps=2,
     )

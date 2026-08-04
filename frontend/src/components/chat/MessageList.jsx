@@ -10,6 +10,7 @@ export default function MessageList({ messages }) {
           key={message.id || `${message.role}-${message.content}`}
           role={message.role}
           content={message.content}
+          loading={message.loading}
         />
       ))}
     </div>

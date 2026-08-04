@@ -12,6 +12,7 @@ class ArxivTool(BaseTool):
     def __init__(self, max_results: int = 3):
         self.client = Client()
         self.max_results = max_results
+        self.max_summary_length = 300
 
     def run(self, query: str) -> ToolResult:
         try:
@@ -24,11 +25,20 @@ class ArxivTool(BaseTool):
             papers = []
 
             for result in self.client.results(search):
+
+                summary = result.summary.strip()
+
+                if len(summary) > self.max_summary_length:
+                    summary = (
+                        summary[: self.max_summary_length].rstrip()
+                        + "..."
+                    )
+
                 papers.append(
                     {
                         "title": result.title,
                         "authors": [a.name for a in result.authors],
-                        "summary": result.summary,
+                        "summary": summary,
                         "published": result.published.strftime("%Y-%m-%d"),
                         "pdf_url": result.pdf_url,
                     }

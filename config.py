@@ -8,8 +8,12 @@ load_dotenv(os.path.join(project_root, "backend", ".env"), override=False)
 # ========= LLM =========
 MODEL_ID = "Qwen/Qwen2.5-72B-Instruct"
 LLM_PROVIDER = os.getenv("LLM_PROVIDER", "huggingface")
+OLLAMA_MODEL = os.getenv(
+    "OLLAMA_MODEL",
+    "qwen2.5:3b",
+)
 #========== Development =========
-USE_MOCK_LLM = True
+USE_MOCK_LLM = False
 # ========= APIs =========
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")

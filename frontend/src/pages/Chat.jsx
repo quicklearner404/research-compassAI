@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 
 import {
@@ -6,6 +6,7 @@ import {
   getMessages,
   chat,
 } from "../services/api";
+
 import ChatHeader from "../components/chat/ChatHeader";
 import MessageList from "../components/chat/MessageList";
 import MessageInput from "../components/chat/MessageInput";
@@ -17,9 +18,18 @@ export default function Chat() {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const messagesContainerRef = useRef(null);
+
   useEffect(() => {
     loadConversation();
   }, [sessionId]);
+
+  useEffect(() => {
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTop =
+        messagesContainerRef.current.scrollHeight;
+    }
+  }, [messages]);
 
   async function loadConversation() {
     try {
@@ -35,24 +45,52 @@ export default function Chat() {
     }
   }
 
-async function handleSend(text) {
+  async function handleSend(text) {
+    const tempUser = {
+      id: `temp-user-${Date.now()}`,
+      role: "user",
+      content: text,
+    };
+
+    const tempAssistant = {
+      id: `temp-assistant-${Date.now()}`,
+      role: "assistant",
+      content: "Thinking...",
+      loading: true,
+    };
+
+    // Immediately show user message + thinking bubble
+    setMessages((prev) => [
+      ...prev,
+      tempUser,
+      tempAssistant,
+    ]);
 
     try {
+      await chat(sessionId, text);
 
-        await chat(sessionId, text);
+      const updatedMessages = await getMessages(sessionId);
 
+      // Replace temporary messages with actual database messages
+      setMessages(updatedMessages);
     } catch (error) {
+      console.error(error);
 
-        console.error(error);
-
+      // Replace thinking bubble with an error
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === tempAssistant.id
+            ? {
+                ...msg,
+                content:
+                  " Something went wrong. Please try again.",
+                loading: false,
+              }
+            : msg
+        )
+      );
     }
-
-    const updatedMessages =
-        await getMessages(sessionId);
-
-    setMessages(updatedMessages);
-
-}
+  }
 
   if (loading) {
     return (
@@ -74,7 +112,10 @@ async function handleSend(text) {
     <div className="flex h-screen flex-col bg-slate-50">
       <ChatHeader title={session.title || "Conversation"} />
 
-      <div className="flex-1 overflow-y-auto">
+      <div
+        ref={messagesContainerRef}
+        className="flex-1 overflow-y-auto"
+      >
         <MessageList messages={messages} />
       </div>
 

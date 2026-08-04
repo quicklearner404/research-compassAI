@@ -1,6 +1,10 @@
 from backend.providers.huggingface_provider import HuggingFaceProvider
-from config import LLM_PROVIDER
 from backend.providers.groq_provider import GroqProvider
+from backend.providers.ollama_provider import OllamaProvider
+
+from config import LLM_PROVIDER
+
+
 def get_provider():
     """
     Returns the configured LLM provider.
@@ -9,6 +13,7 @@ def get_provider():
     providers = {
         "huggingface": HuggingFaceProvider,
         "groq": GroqProvider,
+        "ollama": OllamaProvider,
     }
 
     provider_class = providers.get(LLM_PROVIDER)

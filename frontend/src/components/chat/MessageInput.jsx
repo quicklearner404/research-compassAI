@@ -11,8 +11,8 @@ export default function MessageInput({ onSend }) {
       return;
     }
 
-    await onSend(trimmedText);
     setText("");
+    onSend(trimmedText);
   }
 
   return (

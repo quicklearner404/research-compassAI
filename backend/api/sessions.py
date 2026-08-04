@@ -1,172 +1,141 @@
-from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
-from fastapi import HTTPException
-
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+
+from backend.dependencies import get_db
 
 from backend.schemas.session import SessionCreate, SessionResponse
 from backend.schemas.message import MessageCreate, MessageResponse
 from backend.schemas.chat import ChatRequest, ChatResponse
 
-from backend.dependencies import get_db
+from backend.services.session_service import SessionService
+from backend.services.message_service import MessageService
+from backend.services.chat_service import ChatService
 
-from backend.models.session import Session as ResearchSession
-from backend.models.message import Message
 
-from backend.agent.agent_instance import research_agent
 router = APIRouter(
     prefix="/sessions",
-    tags=["Sessions"]
+    tags=["Sessions"],
 )
+
+session_service = SessionService()
+message_service = MessageService()
+chat_service = ChatService()
 
 
 @router.get("/")
-def get_sessions(db: Session = Depends(get_db)):
-    sessions = db.query(ResearchSession).all()
+def get_sessions(
+    db: Session = Depends(get_db),
+):
+    return session_service.get_all(db)
 
-    return sessions
 
-@router.post("/", response_model=SessionResponse)
+@router.post(
+    "/",
+    response_model=SessionResponse,
+)
 def create_session(
     session: SessionCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
-
-    new_session = ResearchSession(
-        title=session.title
+    return session_service.create(
+        db=db,
+        title=session.title,
     )
 
-    db.add(new_session)
 
-    db.commit()
-
-    db.refresh(new_session)
-
-    return new_session
-@router.get("/{session_id}", response_model=SessionResponse)
+@router.get(
+    "/{session_id}",
+    response_model=SessionResponse,
+)
 def get_session(
     session_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
-    session = (
-        db.query(ResearchSession)
-        .filter(ResearchSession.id == session_id)
-        .first()
+    session = session_service.get(
+        db=db,
+        session_id=session_id,
     )
 
     if session is None:
         raise HTTPException(
             status_code=404,
-            detail="Session not found"
+            detail="Session not found",
         )
 
     return session
+
+
 @router.post(
     "/{session_id}/messages",
-    response_model=MessageResponse
+    response_model=MessageResponse,
 )
 def create_message(
     session_id: int,
     message: MessageCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
-    # Make sure the session exists
-    session = (
-        db.query(ResearchSession)
-        .filter(ResearchSession.id == session_id)
-        .first()
-    )
-
-    if session is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Session not found"
+    try:
+        return message_service.create(
+            db=db,
+            session_id=session_id,
+            role=message.role,
+            content=message.content,
         )
 
-    db_message = Message(
-        session_id=session_id,
-        role=message.role,
-        content=message.content
-    )
+    except ValueError:
+        raise HTTPException(
+            status_code=404,
+            detail="Session not found",
+        )
 
-    db.add(db_message)
-    db.commit()
-    db.refresh(db_message)
 
-    return db_message
 @router.get(
     "/{session_id}/messages",
-    response_model=list[MessageResponse]
+    response_model=list[MessageResponse],
 )
 def get_messages(
     session_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
-    return (
-        db.query(Message)
-        .filter(Message.session_id == session_id)
-        .order_by(Message.created_at.asc())
-        .all()
-    )
+    try:
+        return message_service.get_by_session(
+            db=db,
+            session_id=session_id,
+        )
+
+    except ValueError:
+        raise HTTPException(
+            status_code=404,
+            detail="Session not found",
+        )
+
 
 @router.post(
     "/{session_id}/chat",
-    response_model=ChatResponse
+    response_model=ChatResponse,
 )
 def chat(
     session_id: int,
     request: ChatRequest,
     db: Session = Depends(get_db),
 ):
-    # 1. Check session exists
-    session = (
-        db.query(ResearchSession)
-        .filter(ResearchSession.id == session_id)
-        .first()
-    )
+    try:
+        return chat_service.chat(
+            session_id=session_id,
+            query=request.query,
+            db=db,
+        )
 
-    if session is None:
+    except ValueError:
         raise HTTPException(
             status_code=404,
-            detail="Session not found"
+            detail="Session not found",
         )
-
-    # 2. Save user's message
-    user_message = Message(
-        session_id=session_id,
-        role="user",
-        content=request.query
-    )
-
-    db.add(user_message)
-    db.commit()
-
-    # 3. Run the AI agent
-    try:
-        result = research_agent.run(request.query)
-
-        print("TYPE:", type(result))
-        print("RAW:", repr(result))
-
-        answer = str(result)
-        print("STRING:", repr(answer))
 
     except Exception as e:
-        print(f"Agent Error: {e}")
+        print(f"Chat Error: {e}")
 
-        answer = (
-            "Sorry, I couldn't generate a response right now. "
-            "Please try again later."
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to generate response.",
         )
-
-    assistant_message = Message(
-        session_id=session_id,
-        role="assistant",
-        content=answer
-    )
-
-    db.add(assistant_message)
-    db.commit()
-
-    return ChatResponse(response=answer)

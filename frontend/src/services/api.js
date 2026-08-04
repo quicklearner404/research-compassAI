@@ -85,3 +85,12 @@ export async function chat(sessionId, query) {
 
   return response.json();
 }
+export async function getSessions() {
+  const response = await fetch(`${BASE_URL}/sessions/`);
+
+  if (!response.ok) {
+    throw new Error("Failed to load sessions");
+  }
+
+  return response.json();
+}

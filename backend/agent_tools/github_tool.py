@@ -4,15 +4,15 @@ from backend.agent_tools.base_tool import BaseTool
 from backend.models.tool_result import ToolResult
 from config import GITHUB_TOKEN
 
+
 class GitHubTool(BaseTool):
     """
     Tool for searching GitHub repositories.
     """
 
     def __init__(self, max_results: int = 3):
-        from github import Github, Auth
-
         self.max_results = max_results
+        self.max_description_length = 200
 
         if not GITHUB_TOKEN:
             self.github = Github()
@@ -28,7 +28,7 @@ class GitHubTool(BaseTool):
                 tool="github",
                 success=False,
                 data=[],
-                error="Query cannot be empty."
+                error="Query cannot be empty.",
             )
 
         try:
@@ -36,17 +36,25 @@ class GitHubTool(BaseTool):
             repositories = self.github.search_repositories(
                 query=query,
                 sort="stars",
-                order="desc"
+                order="desc",
             )
 
             results = []
 
-            for repo in repositories[:self.max_results]:
+            for repo in repositories[: self.max_results]:
+
+                description = repo.description or ""
+
+                if len(description) > self.max_description_length:
+                    description = (
+                        description[: self.max_description_length].rstrip()
+                        + "..."
+                    )
 
                 results.append(
                     {
                         "name": repo.full_name,
-                        "description": repo.description,
+                        "description": description,
                         "stars": repo.stargazers_count,
                         "language": repo.language,
                         "url": repo.html_url,
