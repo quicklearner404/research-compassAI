@@ -30,13 +30,15 @@ export default function Dashboard() {
       const session = await createSession(title);
 
       // Send first message
-      await chat(session.id, query);
+      const firstQuery = query;
 
-      // Clear input
       setQuery("");
 
-      // Open chat page
-      navigate(`/chat/${session.id}`);
+      navigate(`/chat/${session.id}`, {
+        state: {
+          initialQuery: firstQuery,
+        },
+      });
     } catch (error) {
       console.error("Failed to start research session:", error);
     }

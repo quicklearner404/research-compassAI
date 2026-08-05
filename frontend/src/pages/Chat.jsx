@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useLocation, useParams } from "react-router-dom";
 
 import {
   getSession,
@@ -10,9 +10,12 @@ import {
 import ChatHeader from "../components/chat/ChatHeader";
 import MessageList from "../components/chat/MessageList";
 import MessageInput from "../components/chat/MessageInput";
+import { shouldProcessInitialQuery } from "../utils/initialQueryGuard";
 
 export default function Chat() {
   const { sessionId } = useParams();
+  const location = useLocation();
+  const processedInitialQueriesRef = useRef(new Set());
 
   const [session, setSession] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -30,6 +33,20 @@ export default function Chat() {
         messagesContainerRef.current.scrollHeight;
     }
   }, [messages]);
+
+  useEffect(() => {
+    if (loading) return;
+
+    const initialQuery = location.state?.initialQuery;
+    const locationKey = `${sessionId}-${location.key}`;
+
+    if (initialQuery && shouldProcessInitialQuery(locationKey, processedInitialQueriesRef.current)) {
+      handleSend(initialQuery);
+
+      // Prevent duplicate send on refresh
+      window.history.replaceState({}, "");
+    }
+  }, [loading, location.key, location.state?.initialQuery, sessionId]);
 
   async function loadConversation() {
     try {
@@ -55,36 +72,38 @@ export default function Chat() {
     const tempAssistant = {
       id: `temp-assistant-${Date.now()}`,
       role: "assistant",
-      content: "Thinking...",
+      content: "",
       loading: true,
     };
 
-    // Immediately show user message + thinking bubble
+    // Optimistic UI
     setMessages((prev) => [
       ...prev,
       tempUser,
       tempAssistant,
     ]);
 
+    // Allow React to paint the optimistic message
+    await new Promise((resolve) =>
+      requestAnimationFrame(resolve)
+    );
+
     try {
       await chat(sessionId, text);
 
       const updatedMessages = await getMessages(sessionId);
 
-      // Replace temporary messages with actual database messages
       setMessages(updatedMessages);
     } catch (error) {
       console.error(error);
 
-      // Replace thinking bubble with an error
       setMessages((prev) =>
         prev.map((msg) =>
           msg.id === tempAssistant.id
             ? {
                 ...msg,
-                content:
-                  " Something went wrong. Please try again.",
                 loading: false,
+                content: "Something went wrong. Please try again.",
               }
             : msg
         )
