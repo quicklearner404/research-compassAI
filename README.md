@@ -1,149 +1,299 @@
+
 # Research Compass AI
 
-Research Compass AI is an agent-based application that helps users explore AI research topics. Given a topic, the agent autonomously discovers relevant research papers, open-source implementations, and learning resources before generating a structured learning roadmap.
+An AI-powered research assistant that autonomously explores technical topics using an agentic workflow.
 
-> **Status:**  In Development
+Instead of simply answering questions, Research Compass AI plans a research strategy, searches multiple knowledge sources, evaluates the retrieved information, and produces a structured research report with references.
+
+The project combines a modern React interface with a FastAPI backend and a multi-tool AI agent built using SmolAgents and LiteLLM.
+
+---
+
+# Features
+
+### Intelligent Research Agent
+
+* Autonomous multi-step reasoning
+* Dynamic tool selection
+* Multi-source information retrieval
+* Structured research reports
+* Markdown rendering
+* Session-based conversations
+
+---
+
+### Research Tools
+
+The agent can use multiple tools during a conversation:
+
+* arXiv paper search
+* GitHub repository search
+* DuckDuckGo web search
+* Tutorial discovery
+* Learning resource recommendations
+
+The agent decides which tools to call instead of relying on hardcoded workflows.
+
+---
+
+### Modern Chat Interface
+
+* React + Vite frontend
+* Real-time conversation interface
+* Optimistic message rendering
+* Automatic scrolling
+* Markdown support
+* Persistent research sessions
+
+---
+
+### Conversation Management
+
+* Create unlimited research sessions
+* Resume previous conversations
+* SQLite-backed chat history
+* Automatically generated session titles
+
+---
+
+### LLM Integration
+
+The backend communicates with language models through LiteLLM.
+
+This abstraction allows switching providers without changing application logic.
+
+Supported providers include:
+
+* OpenAI-compatible APIs
+* Groq
+* Ollama
+* Future providers
+
+---
+
+# Tech Stack
+
+## Frontend
+
+* React
+* Vite
+* Tailwind CSS
+* React Router
+
+---
+
+## Backend
+
+* FastAPI
+* SQLite
+* Uvicorn
+
+---
+
+## AI
+
+* SmolAgents
+* LiteLLM
+* Hugging Face
+* Groq (current provider)
+
+---
+
+## External APIs
+
+* arXiv API
+* GitHub API
+* DuckDuckGo Search
+
+---
+
+# Architecture
+
+```text
+                 User
+                   │
+                   ▼
+         React + Vite Frontend
+                   │
+          REST API Requests
+                   │
+                   ▼
+            FastAPI Backend
+                   │
+          Conversation Manager
+                   │
+                   ▼
+           Research Agent
+          (SmolAgents)
+                   │
+      ┌────────────┼────────────┐
+      ▼            ▼            ▼
+  arXiv Tool   GitHub Tool   Web Search Tool
+      │            │            │
+      └────────────┼────────────┘
+                   │
+          Gather Research Results
+                   │
+                   ▼
+         LiteLLM Provider Layer
+                   │
+                   ▼
+          Language Model (Groq)
+                   │
+                   ▼
+        Structured Markdown Report
+                   │
+                   ▼
+            React Chat Interface
+```
 
 ---
 
 # Project Structure
 
 ```
-research-compass-ai/
+research-compassAI/
+
+backend/
 │
-├── agent/
-├── agent_tools/
+├── agent.py
+├── api.py
+├── database.py
+├── tool_decider.py
+├── tool_result.py
 ├── services/
 ├── utils/
-├── models/
-├── assets/
-├── tests/
-├── .streamlit/
+└── requirements.txt
+
+frontend/
 │
-├── app.py
-├── config.py
-├── requirements.txt
-├── README.md
-└── .env.example
+├── src/
+│   ├── components/
+│   ├── pages/
+│   ├── services/
+│   └── context/
+│
+└── package.json
+
+assets/
+tests/
+
+README.md
+.env.example
 ```
 
 ---
 
-# Directory Overview
+# Backend Workflow
 
-## `agent/`
+When a user submits a research question:
 
-Contains the application's core agent logic.
+1. The frontend sends the query to the FastAPI backend.
 
-| File         | Purpose                                            |
-| ------------ | -------------------------------------------------- |
-| `agent.py`   | Creates and runs the research agent.               |
-| `planner.py` | Handles planning and execution flow between tools. |
-| `prompts.py` | Stores system prompts and agent instructions.      |
+2. The backend stores the user message in SQLite.
 
----
+3. The agent analyzes the question.
 
-## `agent_tools/`
+4. The agent determines which tools are required.
 
-Contains all tools available to the agent.
+5. Each selected tool retrieves relevant information.
 
-Each tool performs one task and exposes a consistent interface.
+6. The collected evidence is passed to the language model through LiteLLM.
 
-| File               | Purpose                                    |
-| ------------------ | ------------------------------------------ |
-| `base_tool.py`     | Base interface implemented by every tool.  |
-| `arxiv_tool.py`    | Retrieves research papers from arXiv.      |
-| `github_tool.py`   | Searches GitHub for relevant repositories. |
-| `learning_tool.py` | Finds tutorials and educational resources. |
-| `search_tool.py`   | Performs general web searches.             |
+7. The model generates a structured research response.
 
----
+8. The response is saved to the conversation database.
 
-## `services/`
-
-Contains application services that process or format data independently of the agent.
-
-| File           | Purpose                               |
-| -------------- | ------------------------------------- |
-| `roadmap.py`   | Builds structured learning roadmaps.  |
-| `formatter.py` | Formats raw outputs for presentation. |
-
----
-
-## `utils/`
-
-Shared helper functions and constants.
-
-| File           | Purpose                                    |
-| -------------- | ------------------------------------------ |
-| `helpers.py`   | Utility functions used across the project. |
-| `constants.py` | Shared constants and default values.       |
-
----
-
-## `models/`
-
-Reserved for future data models and schemas.
-
----
-
-## `tests/`
-
-Unit tests for individual modules.
-
----
-
-## `assets/`
-
-Static project assets.
-
-Examples include screenshots, diagrams, and demonstration media.
-
----
-
-## `.streamlit/`
-
-Configuration files for the Streamlit application.
-
----
-
-# Root Files
-
-| File               | Purpose                                                    |
-| ------------------ | ---------------------------------------------------------- |
-| `app.py`           | Streamlit application entry point.                         |
-| `config.py`        | Loads application configuration and environment variables. |
-| `requirements.txt` | Python dependencies.                                       |
-| `.env.example`     | Template for required environment variables.               |
-| `README.md`        | Project documentation.                                     |
+9. The frontend fetches and displays the completed conversation.
 
 ---
 
 # Design Principles
 
-The project is organized around four independent layers:
+The project is divided into independent layers.
 
-* **User Interface** — Handles user interaction.
-* **Agent** — Plans actions and decides which tools to use.
-* **Tools** — Execute external operations such as searching arXiv or GitHub.
-* **Services** — Process and format results before presentation.
+### Frontend
 
-This separation keeps components modular, reusable, and easy to extend.
+Responsible only for user interaction and presentation.
 
 ---
 
-# Planned Features
+### Backend API
 
-* Agent-based research exploration
-* arXiv integration
-* GitHub repository discovery
-* Learning resource recommendations
-* Personalized learning roadmap
-* Streamlit interface
-* Hugging Face Spaces deployment
+Handles authentication, session management, and communication between the frontend and the AI agent.
+
+---
+
+### Research Agent
+
+Acts as the reasoning engine.
+
+It decides:
+
+* what information is required,
+* which tools to call,
+* when to stop searching,
+* and how to synthesize the final response.
+
+---
+
+### Tools
+
+Each tool performs one specialized task.
+
+Examples:
+
+* arXiv search
+* GitHub search
+* Web search
+
+Tools remain independent so new capabilities can be added without modifying the agent.
+
+---
+
+### LiteLLM Provider Layer
+
+Separates application logic from model providers.
+
+Changing from Groq to Ollama or OpenAI only requires updating configuration rather than rewriting the backend.
+
+---
+
+# Future Improvements
+
+* Streaming responses
+* Multi-provider fallback
+* Citation verification
+* Saved reports
+* PDF export
+* User authentication
+* Conversation sharing
+* Research summarization
+
+---
+
+# Deployment
+
+Frontend:
+
+* Vercel
+
+Backend:
+
+* Render
+
+Database:
+
+* SQLite (development)
+* PostgreSQL (future)
 
 ---
 
 # License
 
 MIT License
+
+---
+
+
+
