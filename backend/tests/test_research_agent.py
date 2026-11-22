@@ -1,6 +1,7 @@
 from types import SimpleNamespace
 
 import pytest
+from smolagents.memory import ActionStep
 
 from backend.agent import agent as agent_module
 from backend.agent.agent import ResearchAgent
@@ -17,12 +18,16 @@ class FakeModel:
 
 
 class FakeToolAgent:
-    def __init__(self):
+    def __init__(self, answer="agent answer", observations=""):
         self.prompts = []
+        self.answer = answer
+        self.memory = SimpleNamespace(
+            steps=[ActionStep(step_number=1, timing=None, observations=observations)]
+        )
 
     def run(self, prompt):
         self.prompts.append(prompt)
-        return "agent answer"
+        return self.answer
 
 
 @pytest.fixture
@@ -70,3 +75,24 @@ def test_accepts_conversation_context(live_agent):
     context = ConversationContext(history=[], current_query="Explain dropout")
 
     assert live_agent.run(context) == "direct answer"
+
+
+def test_grounded_citations_pass_through_unchanged(live_agent):
+    live_agent._agent = FakeToolAgent(
+        answer="See https://arxiv.org/abs/2005.11401",
+        observations='[{"pdf_url": "http://arxiv.org/pdf/2005.11401v4"}]',
+    )
+
+    assert live_agent.run("find papers on rag") == "See https://arxiv.org/abs/2005.11401"
+
+
+def test_fabricated_citations_are_flagged(live_agent):
+    live_agent._agent = FakeToolAgent(
+        answer="See https://arxiv.org/abs/2005.11401 and https://arxiv.org/abs/2399.00001",
+        observations='[{"pdf_url": "http://arxiv.org/pdf/2005.11401v4"}]',
+    )
+
+    answer = live_agent.run("find papers on rag")
+
+    assert "Unverified links" in answer
+    assert answer.endswith("> - https://arxiv.org/abs/2399.00001")
