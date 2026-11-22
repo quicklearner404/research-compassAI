@@ -8,10 +8,7 @@ import QuickActions from "../components/dashboard/QuickActions";
 import RecentSessions from "../components/dashboard/RecentSessions";
 import TrendingTopics from "../components/dashboard/TrendingTopics";
 
-import {
-  createSession,
-  chat,
-} from "../services/api";
+import { createSession } from "../services/api";
 
 export default function Dashboard() {
   const [query, setQuery] = useState("");
