@@ -24,6 +24,8 @@ jobs:
             requirements-dev.txt
       - run: pip install -r requirements-dev.txt
       - run: pytest
+      - name: Offline evals (fail on regression)
+        run: python -m evals.run_evals --check
 
   frontend:
     name: Frontend lint, test, build

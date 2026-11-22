@@ -1,0 +1,60 @@
+{"id": "r01", "query": "Find recent papers on retrieval augmented generation", "label": "tools", "category": "explicit"}
+{"id": "r02", "query": "Search GitHub for LoRA fine-tuning repositories", "label": "tools", "category": "explicit"}
+{"id": "r03", "query": "Latest research on mixture of experts", "label": "tools", "category": "explicit"}
+{"id": "r04", "query": "Any tutorials on diffusion models?", "label": "tools", "category": "explicit"}
+{"id": "r05", "query": "Show me implementations of Vision Transformer in PyTorch", "label": "tools", "category": "explicit"}
+{"id": "r06", "query": "Give me a survey paper on graph neural networks", "label": "tools", "category": "explicit"}
+{"id": "r07", "query": "Point me to the official docs for Hugging Face PEFT", "label": "tools", "category": "explicit"}
+{"id": "r08", "query": "Where can I find code for the YOLOv8 paper?", "label": "tools", "category": "explicit"}
+{"id": "r09", "query": "github repos for speech recognition", "label": "tools", "category": "explicit"}
+{"id": "r10", "query": "Find datasets for medical named entity recognition", "label": "tools", "category": "explicit"}
+{"id": "r11", "query": "Look up the original Attention Is All You Need paper", "label": "tools", "category": "explicit"}
+{"id": "r12", "query": "Good resources for learning CUDA programming", "label": "tools", "category": "explicit"}
+{"id": "r13", "query": "Compare recent approaches to RLHF with citations", "label": "tools", "category": "explicit"}
+{"id": "r14", "query": "Search for benchmarks that evaluate code LLMs", "label": "tools", "category": "explicit"}
+{"id": "r15", "query": "Find me a repo that implements BPE tokenization", "label": "tools", "category": "explicit"}
+{"id": "r16", "query": "Tutorial for deploying FastAPI on Render", "label": "tools", "category": "explicit"}
+{"id": "r17", "query": "Papers comparing RAG and fine-tuning", "label": "tools", "category": "explicit"}
+{"id": "r18", "query": "Link me to the PyTorch documentation for DataLoader", "label": "tools", "category": "explicit"}
+{"id": "r19", "query": "What are the newest papers on speculative decoding?", "label": "tools", "category": "explicit"}
+{"id": "r20", "query": "Recommend some courses to learn reinforcement learning", "label": "tools", "category": "synonym"}
+{"id": "r21", "query": "Which open-source libraries implement BM25?", "label": "tools", "category": "synonym"}
+{"id": "r22", "query": "Are there any blog posts explaining FlashAttention?", "label": "tools", "category": "synonym"}
+{"id": "r23", "query": "List arXiv preprints on LLM watermarking from 2025", "label": "tools", "category": "synonym"}
+{"id": "r24", "query": "What's the state of the art on ImageNet right now?", "label": "tools", "category": "synonym"}
+{"id": "r25", "query": "Recommend books on deep learning", "label": "tools", "category": "synonym"}
+{"id": "r26", "query": "I need references on contrastive learning", "label": "tools", "category": "synonym"}
+{"id": "r27", "query": "Who published work on chain-of-thought prompting?", "label": "tools", "category": "synonym"}
+{"id": "r28", "query": "Show me example projects that use LangGraph", "label": "tools", "category": "synonym"}
+{"id": "r29", "query": "What new models were released this month?", "label": "tools", "category": "synonym"}
+{"id": "r30", "query": "Suggest reading material on transformer interpretability", "label": "tools", "category": "synonym"}
+{"id": "r31", "query": "hello", "label": "direct", "category": "chitchat"}
+{"id": "r32", "query": "thanks!", "label": "direct", "category": "chitchat"}
+{"id": "r33", "query": "Summarize what you just told me", "label": "direct", "category": "chitchat"}
+{"id": "r34", "query": "Can you explain that again more simply?", "label": "direct", "category": "chitchat"}
+{"id": "r35", "query": "What is backpropagation?", "label": "direct", "category": "concept"}
+{"id": "r36", "query": "Explain the attention mechanism in simple terms", "label": "direct", "category": "concept"}
+{"id": "r37", "query": "What's the difference between precision and recall?", "label": "direct", "category": "concept"}
+{"id": "r38", "query": "How does dropout prevent overfitting?", "label": "direct", "category": "concept"}
+{"id": "r39", "query": "Write a Python function to compute cosine similarity", "label": "direct", "category": "concept"}
+{"id": "r40", "query": "Why is my training loss NaN?", "label": "direct", "category": "concept"}
+{"id": "r41", "query": "Explain how LoRA works", "label": "direct", "category": "concept"}
+{"id": "r42", "query": "What is a vector database?", "label": "direct", "category": "concept"}
+{"id": "r43", "query": "What is gradient descent?", "label": "direct", "category": "concept"}
+{"id": "r44", "query": "How do I implement a linked list in Java?", "label": "direct", "category": "concept"}
+{"id": "r45", "query": "Compare CNNs and transformers for image classification", "label": "direct", "category": "concept"}
+{"id": "r46", "query": "What's the time complexity of quicksort?", "label": "direct", "category": "concept"}
+{"id": "r47", "query": "Explain the bias-variance tradeoff", "label": "direct", "category": "concept"}
+{"id": "r48", "query": "How should I structure a FastAPI project?", "label": "direct", "category": "concept"}
+{"id": "r49", "query": "What is the softmax function?", "label": "direct", "category": "concept"}
+{"id": "r50", "query": "How do I find the median of a list in Python?", "label": "direct", "category": "keyword-overlap"}
+{"id": "r51", "query": "What does the research process look like for a PhD student?", "label": "direct", "category": "keyword-overlap"}
+{"id": "r52", "query": "How do I search a binary tree?", "label": "direct", "category": "keyword-overlap"}
+{"id": "r53", "query": "How do I get the latest row per group in SQL?", "label": "direct", "category": "keyword-overlap"}
+{"id": "r54", "query": "How does a GitHub Actions workflow file work?", "label": "direct", "category": "keyword-overlap"}
+{"id": "r55", "query": "What is the repository pattern in software architecture?", "label": "direct", "category": "keyword-overlap"}
+{"id": "r56", "query": "What resources does a Kubernetes pod request by default?", "label": "direct", "category": "keyword-overlap"}
+{"id": "r57", "query": "Is binary search faster than linear search?", "label": "direct", "category": "keyword-overlap"}
+{"id": "r58", "query": "Do LSTMs remember recent inputs better than old ones?", "label": "direct", "category": "keyword-overlap"}
+{"id": "r59", "query": "Translate to French: I love research", "label": "direct", "category": "keyword-overlap"}
+{"id": "r60", "query": "What is the PEP 257 convention for documentation strings?", "label": "direct", "category": "keyword-overlap"}
