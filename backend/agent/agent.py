@@ -1,13 +1,18 @@
+import logging
 import re
 
+from smolagents.memory import ActionStep
 from smolagents.models import ChatMessage, MessageRole
 
 from backend.agent.agent_factory import build_agent
 from backend.agent.prompts import SYSTEM_PROMPT
 from backend.providers.factory import get_provider
+from backend.services.citations import check_citations, unverified_links_note
 from backend.services.context import ConversationContext
 from backend.services.prompt_service import PromptService
 from config import USE_MOCK_LLM
+
+logger = logging.getLogger(__name__)
 
 TOOL_KEYWORDS = frozenset(
     {
@@ -95,4 +100,27 @@ class ResearchAgent:
             )
             return response.content
 
-        return str(self.agent.run(prompt))
+        answer = str(self.agent.run(prompt))
+        return self._verify_citations(answer)
+
+    def _tool_observations(self) -> str:
+        """Concatenated tool outputs from the agent's most recent run."""
+        return "\n".join(
+            step.observations
+            for step in self.agent.memory.steps
+            if isinstance(step, ActionStep) and step.observations
+        )
+
+    def _verify_citations(self, answer: str) -> str:
+        """Flag links in the answer that no tool actually returned."""
+        report = check_citations(answer, self._tool_observations())
+
+        if report.is_grounded:
+            return answer
+
+        logger.warning(
+            "Answer cited %d link(s) not returned by any tool: %s",
+            len(report.ungrounded),
+            report.ungrounded,
+        )
+        return answer + unverified_links_note(report)

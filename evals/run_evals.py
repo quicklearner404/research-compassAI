@@ -1,0 +1,257 @@
+"""
+Offline evaluation suite for Research Compass AI.
+
+    python -m evals.run_evals            # print summary, write evals/results/
+    python -m evals.run_evals --check    # also fail if metrics drop below evals/baseline.json
+
+Two deterministic evaluations, no LLM or network required:
+
+1. Router: does needs_tools() send each query down the right path?
+   Labelled set: evals/router_cases.jsonl (label = intent, not keywords).
+2. Citation grounding: does check_citations() flag exactly the links the
+   tools never returned? Cases: evals/citation_cases.jsonl.
+"""
+
+import argparse
+import json
+import sys
+from pathlib import Path
+
+from backend.agent.agent import TOOL_KEYWORDS, needs_tools, normalize
+from backend.services.citations import check_citations
+
+EVAL_DIR = Path(__file__).resolve().parent
+RESULTS_DIR = EVAL_DIR / "results"
+BASELINE_PATH = EVAL_DIR / "baseline.json"
+
+
+def load_jsonl(path: Path) -> list[dict]:
+    with path.open(encoding="utf-8") as f:
+        return [json.loads(line) for line in f if line.strip()]
+
+
+# --------------------------------------------------------------------------- #
+# Router evaluation
+# --------------------------------------------------------------------------- #
+
+def diagnose_routing_error(query: str, expected: str) -> str:
+    """Explain *why* the keyword router got this query wrong."""
+    words = set(normalize(query).split())
+    hits = sorted(words & TOOL_KEYWORDS)
+    if expected == "direct":
+        return f"keyword overlap: {', '.join(repr(h) for h in hits)} used in a non-retrieval sense"
+    return "vocabulary gap: retrieval intent expressed without any routing keyword"
+
+
+def binary_metrics(gold: list[str], pred: list[str], positive: str) -> dict:
+    tp = sum(g == positive and p == positive for g, p in zip(gold, pred))
+    fp = sum(g != positive and p == positive for g, p in zip(gold, pred))
+    fn = sum(g == positive and p != positive for g, p in zip(gold, pred))
+    tn = sum(g != positive and p != positive for g, p in zip(gold, pred))
+    precision = tp / (tp + fp) if tp + fp else 0.0
+    recall = tp / (tp + fn) if tp + fn else 0.0
+    f1 = 2 * precision * recall / (precision + recall) if precision + recall else 0.0
+    return {
+        "accuracy": (tp + tn) / len(gold) if gold else 0.0,
+        "precision": precision,
+        "recall": recall,
+        "f1": f1,
+        "confusion": {"tp": tp, "fp": fp, "fn": fn, "tn": tn},
+    }
+
+
+def evaluate_router(cases: list[dict]) -> dict:
+    gold = [c["label"] for c in cases]
+    pred = ["tools" if needs_tools(c["query"]) else "direct" for c in cases]
+
+    metrics = binary_metrics(gold, pred, positive="tools")
+
+    by_category: dict[str, list[bool]] = {}
+    failures = []
+    for case, p in zip(cases, pred):
+        correct = case["label"] == p
+        by_category.setdefault(case["category"], []).append(correct)
+        if not correct:
+            failures.append(
+                {
+                    "id": case["id"],
+                    "query": case["query"],
+                    "expected": case["label"],
+                    "predicted": p,
+                    "diagnosis": diagnose_routing_error(case["query"], case["label"]),
+                }
+            )
+
+    metrics["n"] = len(cases)
+    metrics["by_category"] = {
+        cat: {"n": len(v), "accuracy": sum(v) / len(v)} for cat, v in by_category.items()
+    }
+    metrics["failures"] = failures
+    return metrics
+
+
+# --------------------------------------------------------------------------- #
+# Citation grounding evaluation
+# --------------------------------------------------------------------------- #
+
+def evaluate_citations(cases: list[dict]) -> dict:
+    tp = fp = fn = 0
+    exact = 0
+    failures = []
+
+    for case in cases:
+        report = check_citations(case["answer"], case["observations"])
+        flagged = set(report.ungrounded)
+        expected = set(case["expected_ungrounded"])
+
+        tp += len(flagged & expected)
+        fp += len(flagged - expected)
+        fn += len(expected - flagged)
+
+        if flagged == expected:
+            exact += 1
+        else:
+            failures.append(
+                {
+                    "id": case["id"],
+                    "false_alarms": sorted(flagged - expected),
+                    "missed": sorted(expected - flagged),
+                }
+            )
+
+    precision = tp / (tp + fp) if tp + fp else 1.0
+    recall = tp / (tp + fn) if tp + fn else 1.0
+    return {
+        "n": len(cases),
+        "case_accuracy": exact / len(cases) if cases else 0.0,
+        "flag_precision": precision,
+        "flag_recall": recall,
+        "failures": failures,
+    }
+
+
+# --------------------------------------------------------------------------- #
+# Reporting
+# --------------------------------------------------------------------------- #
+
+def render_report(router: dict, citations: dict) -> str:
+    c = router["confusion"]
+    lines = [
+        "# Evaluation report",
+        "",
+        "Generated by `python -m evals.run_evals`. Deterministic; no LLM or network calls.",
+        "",
+        "**How to read these numbers.** The router set is deliberately adversarial: half",
+        "of it (`synonym`, `keyword-overlap`) was written to probe known weaknesses of",
+        "keyword matching, so overall accuracy reflects this case mix, not real traffic.",
+        "The citation cases were written together with the checker; they act as an",
+        "executable specification and regression test rather than an independent benchmark.",
+        "",
+        "## 1. Query router (`needs_tools`)",
+        "",
+        f"{router['n']} hand-labelled queries; positive class = needs tools.",
+        "",
+        "| Metric | Value |",
+        "|---|---|",
+        f"| Accuracy | {router['accuracy']:.1%} |",
+        f"| Precision (tools) | {router['precision']:.1%} |",
+        f"| Recall (tools) | {router['recall']:.1%} |",
+        f"| F1 (tools) | {router['f1']:.3f} |",
+        "",
+        "Confusion matrix:",
+        "",
+        "| | predicted tools | predicted direct |",
+        "|---|---|---|",
+        f"| **gold tools** | {c['tp']} | {c['fn']} |",
+        f"| **gold direct** | {c['fp']} | {c['tn']} |",
+        "",
+        "Accuracy by category:",
+        "",
+        "| Category | n | Accuracy |",
+        "|---|---|---|",
+    ]
+    for cat, m in router["by_category"].items():
+        lines.append(f"| {cat} | {m['n']} | {m['accuracy']:.0%} |")
+
+    lines += [
+        "",
+        f"### Routing failures ({len(router['failures'])})",
+        "",
+        "| id | Query | Expected | Got | Diagnosis |",
+        "|---|---|---|---|---|",
+    ]
+    for f in router["failures"]:
+        lines.append(
+            f"| {f['id']} | {f['query']} | {f['expected']} | {f['predicted']} | {f['diagnosis']} |"
+        )
+
+    lines += [
+        "",
+        "## 2. Citation grounding (`check_citations`)",
+        "",
+        f"{citations['n']} answer/tool-output pairs with known fabricated links.",
+        "",
+        "| Metric | Value |",
+        "|---|---|",
+        f"| Cases fully correct | {citations['case_accuracy']:.1%} |",
+        f"| Flag precision | {citations['flag_precision']:.1%} |",
+        f"| Flag recall | {citations['flag_recall']:.1%} |",
+        "",
+    ]
+    if citations["failures"]:
+        lines.append("Failures:")
+        for f in citations["failures"]:
+            lines.append(f"- `{f['id']}`: false alarms {f['false_alarms']}, missed {f['missed']}")
+    else:
+        lines.append("No failures.")
+
+    return "\n".join(lines) + "\n"
+
+
+def summary_metrics(router: dict, citations: dict) -> dict:
+    return {
+        "router_accuracy": round(router["accuracy"], 4),
+        "router_f1": round(router["f1"], 4),
+        "citation_case_accuracy": round(citations["case_accuracy"], 4),
+    }
+
+
+def run() -> tuple[dict, dict]:
+    router = evaluate_router(load_jsonl(EVAL_DIR / "router_cases.jsonl"))
+    citations = evaluate_citations(load_jsonl(EVAL_DIR / "citation_cases.jsonl"))
+    return router, citations
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[1])
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="exit non-zero if any metric falls below evals/baseline.json",
+    )
+    args = parser.parse_args()
+
+    router, citations = run()
+    summary = summary_metrics(router, citations)
+
+    RESULTS_DIR.mkdir(exist_ok=True)
+    (RESULTS_DIR / "report.md").write_text(render_report(router, citations), encoding="utf-8")
+    (RESULTS_DIR / "metrics.json").write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
+
+    print(json.dumps(summary, indent=2))
+    print(f"Report written to {RESULTS_DIR / 'report.md'}")
+
+    if args.check:
+        baseline = json.loads(BASELINE_PATH.read_text(encoding="utf-8"))
+        regressions = {k: (summary[k], v) for k, v in baseline.items() if summary[k] < v}
+        if regressions:
+            for name, (got, floor) in regressions.items():
+                print(f"REGRESSION {name}: {got} < baseline {floor}", file=sys.stderr)
+            return 1
+        print("All metrics at or above baseline.")
+
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
