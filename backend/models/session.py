@@ -1,5 +1,5 @@
 from sqlalchemy import Column, Integer, String, DateTime
-from datetime import datetime
+from backend.models.utils import utcnow
 from sqlalchemy.orm import relationship
 from backend.database import Base
 
@@ -11,12 +11,12 @@ class Session(Base):
 
     title = Column(String, nullable=False)
 
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=utcnow)
 
     updated_at = Column(
         DateTime,
-        default=datetime.utcnow,
-        onupdate=datetime.utcnow
+        default=utcnow,
+        onupdate=utcnow
     )
     messages = relationship(
     "Message",

@@ -1,0 +1,14 @@
+[project]
+name = "research-compass-ai"
+version = "0.1.0"
+description = "Agentic research assistant: arXiv, GitHub and web search tools orchestrated by an LLM agent."
+requires-python = ">=3.11"
+license = { text = "MIT" }
+
+[tool.pytest.ini_options]
+testpaths = ["backend/tests"]
+pythonpath = ["."]
+addopts = "-ra"
+markers = [
+    "live: hits real external APIs (arXiv, GitHub, DuckDuckGo); run with RUN_LIVE_TESTS=1",
+]

@@ -1,4 +1,4 @@
-from datetime import datetime
+from backend.models.utils import utcnow
 from sqlalchemy.orm import Session
 
 from backend.models.session import Session as ResearchSession
@@ -47,7 +47,7 @@ class SessionRepository:
         db: Session,
         session: ResearchSession,
     ):
-        session.updated_at = datetime.utcnow()
+        session.updated_at = utcnow()
 
         db.commit()
 
