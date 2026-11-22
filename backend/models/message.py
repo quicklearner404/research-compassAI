@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
-from datetime import datetime
+from backend.models.utils import utcnow
 
 from backend.database import Base
 
@@ -22,7 +22,7 @@ class Message(Base):
 
     created_at = Column(
         DateTime,
-        default=datetime.utcnow
+        default=utcnow
     )
 
     session = relationship(

@@ -1,4 +1,4 @@
-import { BookOpen, Compass, GitBranch } from "lucide-react";
+import { BookOpen } from "lucide-react";
 
 export default function FeatureCard({ title, description, icon: Icon }) {
   const iconClass = "h-12 w-12 rounded-xl bg-blue-50 text-blue-600";

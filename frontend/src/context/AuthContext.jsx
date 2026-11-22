@@ -43,6 +43,8 @@ export function AuthProvider({ children }) {
   );
 }
 
+// Hook lives next to its context provider by design.
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth() {
   return useContext(AuthContext);
 }

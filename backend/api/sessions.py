@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
@@ -11,6 +13,8 @@ from backend.services.session_service import SessionService
 from backend.services.message_service import MessageService
 from backend.services.chat_service import ChatService
 
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(
     prefix="/sessions",
@@ -132,8 +136,8 @@ def chat(
             detail="Session not found",
         )
 
-    except Exception as e:
-        print(f"Chat Error: {e}")
+    except Exception:
+        logger.exception("Chat request failed for session %s", session_id)
 
         raise HTTPException(
             status_code=500,

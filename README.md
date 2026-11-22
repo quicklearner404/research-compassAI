@@ -1,299 +1,158 @@
-
 # Research Compass AI
 
-An AI-powered research assistant that autonomously explores technical topics using an agentic workflow.
+[![CI](https://github.com/quicklearner404/research-compassAI/actions/workflows/ci.yml/badge.svg)](https://github.com/quicklearner404/research-compassAI/actions/workflows/ci.yml)
+![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-blue)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-Instead of simply answering questions, Research Compass AI plans a research strategy, searches multiple knowledge sources, evaluates the retrieved information, and produces a structured research report with references.
+An agentic research assistant for AI/ML topics. Ask a question and it either
+answers directly, or, for research requests ("find recent papers on RAG
+evaluation", "GitHub implementations of ViT"), hands the query to a
+tool-calling agent that searches **arXiv**, **GitHub** and the **web** and
+writes a grounded Markdown answer that only cites what the tools returned.
 
-The project combines a modern React interface with a FastAPI backend and a multi-tool AI agent built using SmolAgents and LiteLLM.
+![Research Compass AI landing page](docs/landing.png)
 
----
+## Features
 
-# Features
+- **Tool-calling agent** built on [smolagents](https://github.com/huggingface/smolagents) with three tools: arXiv paper search, GitHub repository search and DuckDuckGo web search.
+- **Query routing**: general questions take a fast path straight to the LLM; research and resource requests go through the agent and its tools.
+- **Grounded answers**: the system prompt tells the model to cite only papers and repositories the tools returned, and to say so when results are weak.
+- **Swappable LLM providers**: Hugging Face Inference, Groq or a local Ollama model, chosen with one environment variable.
+- **Persistent research sessions**: a FastAPI and SQLite backend stores conversations, and the first question becomes the session title.
+- **React UI**: Vite, Tailwind, Markdown rendering and Google sign-in through Firebase.
+- **Offline test suite**: 49 deterministic tests with mocked external APIs, plus optional live smoke tests. CI runs on Python 3.11 to 3.13.
 
-### Intelligent Research Agent
-
-* Autonomous multi-step reasoning
-* Dynamic tool selection
-* Multi-source information retrieval
-* Structured research reports
-* Markdown rendering
-* Session-based conversations
-
----
-
-### Research Tools
-
-The agent can use multiple tools during a conversation:
-
-* arXiv paper search
-* GitHub repository search
-* DuckDuckGo web search
-* Tutorial discovery
-* Learning resource recommendations
-
-The agent decides which tools to call instead of relying on hardcoded workflows.
-
----
-
-### Modern Chat Interface
-
-* React + Vite frontend
-* Real-time conversation interface
-* Optimistic message rendering
-* Automatic scrolling
-* Markdown support
-* Persistent research sessions
-
----
-
-### Conversation Management
-
-* Create unlimited research sessions
-* Resume previous conversations
-* SQLite-backed chat history
-* Automatically generated session titles
-
----
-
-### LLM Integration
-
-The backend communicates with language models through LiteLLM.
-
-This abstraction allows switching providers without changing application logic.
-
-Supported providers include:
-
-* OpenAI-compatible APIs
-* Groq
-* Ollama
-* Future providers
-
----
-
-# Tech Stack
-
-## Frontend
-
-* React
-* Vite
-* Tailwind CSS
-* React Router
-
----
-
-## Backend
-
-* FastAPI
-* SQLite
-* Uvicorn
-
----
-
-## AI
-
-* SmolAgents
-* LiteLLM
-* Hugging Face
-* Groq (current provider)
-
----
-
-## External APIs
-
-* arXiv API
-* GitHub API
-* DuckDuckGo Search
-
----
-
-# Architecture
+## Architecture
 
 ```text
-                 User
-                   │
-                   ▼
-         React + Vite Frontend
-                   │
-          REST API Requests
-                   │
-                   ▼
-            FastAPI Backend
-                   │
-          Conversation Manager
-                   │
-                   ▼
-           Research Agent
-          (SmolAgents)
-                   │
-      ┌────────────┼────────────┐
-      ▼            ▼            ▼
-  arXiv Tool   GitHub Tool   Web Search Tool
-      │            │            │
-      └────────────┼────────────┘
-                   │
-          Gather Research Results
-                   │
-                   ▼
-         LiteLLM Provider Layer
-                   │
-                   ▼
-          Language Model (Groq)
-                   │
-                   ▼
-        Structured Markdown Report
-                   │
-                   ▼
-            React Chat Interface
+React + Vite frontend ──REST──▶ FastAPI  (/sessions, /sessions/{id}/chat)
+                                   │
+                         ChatService: save message → build context
+                                   │      (MemoryService, PromptService)
+                                   ▼
+                             ResearchAgent
+                     needs_tools(query)?  ── no ──▶ LLM (direct answer)
+                                   │ yes
+                                   ▼
+                     smolagents ToolCallingAgent
+                 ┌─────────────────┼─────────────────┐
+             arxiv_search     github_search      web_search
+            (arxiv API)       (PyGithub)       (DuckDuckGo)
+                 └─────────────────┼─────────────────┘
+                                   ▼
+                     LLM provider (HF / Groq / Ollama)
+                                   ▼
+                  Markdown answer → saved to SQLite → UI
 ```
 
----
+Every tool implements `BaseTool.run(query) -> ToolResult` and never raises:
+API failures (rate limits, timeouts) come back as `success=False` with an
+error message, so a single failing source can't crash a chat request.
+`hf_tools.py` wraps each tool as a smolagents `Tool`, so adding a new source
+means writing one `BaseTool` subclass and registering it in `tool_registry.py`.
 
-# Project Structure
+## Project structure
 
-```
-research-compassAI/
-
+```text
 backend/
-│
-├── agent.py
-├── api.py
-├── database.py
-├── tool_decider.py
-├── tool_result.py
-├── services/
-├── utils/
-└── requirements.txt
-
-frontend/
-│
-├── src/
-│   ├── components/
-│   ├── pages/
-│   ├── services/
-│   └── context/
-│
-└── package.json
-
-assets/
-tests/
-
-README.md
-.env.example
+  app.py               FastAPI app, CORS, table creation
+  api/sessions.py      REST endpoints (sessions, messages, chat)
+  agent/               ResearchAgent, routing, prompts, smolagents tool wrappers
+  agent_tools/         arXiv / GitHub / web search tools (+ shared query enrichment)
+  providers/           Hugging Face, Groq and Ollama model factories
+  services/            chat orchestration, conversation memory, prompt building
+  repositories/        SQLAlchemy data access
+  models/ schemas/     ORM models and Pydantic request/response schemas
+  tests/               pytest suite (offline by default)
+frontend/              React + Vite app
+scripts/run_agent.py   command-line demo of the agent
+config.py              all settings, read from environment variables
 ```
 
----
+## Quick start
 
-# Backend Workflow
+**Requirements:** Python 3.11+ and Node 22+.
 
-When a user submits a research question:
+### 1. Backend
 
-1. The frontend sends the query to the FastAPI backend.
+```bash
+git clone https://github.com/quicklearner404/research-compassAI.git
+cd research-compassAI
+python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+cp .env.example .env      # then set LLM_PROVIDER and the matching key
+uvicorn backend.app:app --reload
+```
 
-2. The backend stores the user message in SQLite.
+The API runs at http://127.0.0.1:8000, with interactive docs at `/docs`.
 
-3. The agent analyzes the question.
+> **No API key?** Set `USE_MOCK_LLM=true` in `.env` to run the full app with canned responses.
 
-4. The agent determines which tools are required.
+### 2. Frontend
 
-5. Each selected tool retrieves relevant information.
+```bash
+cd frontend
+npm install
+cp .env.example .env      # set VITE_API_URL and your Firebase web config
+npm run dev
+```
 
-6. The collected evidence is passed to the language model through LiteLLM.
+Open http://localhost:5173.
 
-7. The model generates a structured research response.
+### 3. Command-line demo (no UI)
 
-8. The response is saved to the conversation database.
+```bash
+python -m scripts.run_agent "Find three recent Vision Transformer papers on arXiv"
+```
 
-9. The frontend fetches and displays the completed conversation.
+## Configuration
 
----
+All settings are environment variables (see [`.env.example`](.env.example)):
 
-# Design Principles
+| Variable | Default | Purpose |
+|---|---|---|
+| `LLM_PROVIDER` | `huggingface` | `huggingface`, `groq` or `ollama` |
+| `HF_TOKEN` / `HF_MODEL_ID` | – / `Qwen/Qwen2.5-72B-Instruct` | Hugging Face Inference |
+| `GROQ_API_KEY` / `GROQ_MODEL` | – / `openai/gpt-oss-120b` | Groq |
+| `OLLAMA_MODEL` / `OLLAMA_BASE_URL` | `qwen2.5:3b` / `http://localhost:11434` | Local Ollama |
+| `AGENT_MAX_STEPS` | `1` | Maximum tool-calling steps per question |
+| `GITHUB_TOKEN` | – | Optional; raises the GitHub search rate limit |
+| `USE_MOCK_LLM` | `false` | Canned responses, no LLM calls |
+| `DATABASE_URL` | SQLite file in the repo root | Any SQLAlchemy URL |
+| `CORS_ORIGINS` | `http://localhost:5173` | Comma-separated allowed frontend origins |
 
-The project is divided into independent layers.
+## Testing
 
-### Frontend
+```bash
+pip install -r requirements-dev.txt
+pytest                                  # 49 offline tests, about 1 second
+RUN_LIVE_TESTS=1 pytest -m live         # optional: hit the real arXiv/GitHub/DDG APIs
+cd frontend && npm test && npm run lint
+```
 
-Responsible only for user interaction and presentation.
+The default suite needs no network and no API keys:
 
----
+- **Tools**: arXiv, GitHub and DuckDuckGo clients are replaced with fakes. Tests check result normalization, truncation, result limits, query enrichment and that API errors become `ToolResult(success=False)` instead of exceptions.
+- **Agent**: routing (`needs_tools`) and dispatch, checking that general questions go to the LLM and research questions go to the tool agent, using fake models.
+- **Memory and prompts**: context window, history ordering and prompt layout.
+- **API**: FastAPI `TestClient` against a throwaway SQLite database, covering session CRUD, chat persistence, auto-titling, 404 handling and ordering.
 
-### Backend API
+CI ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) runs the backend suite on Python 3.11, 3.12 and 3.13, and lints, tests and builds the frontend on every push and pull request.
 
-Handles authentication, session management, and communication between the frontend and the AI agent.
+## Design notes and known limitations
 
----
+- **Keyword routing** is fast and predictable but crude. "Explain transformers" goes to the direct path, while "find a good explanation of transformers" uses tools. An LLM or classifier-based router is a planned improvement.
+- **`AGENT_MAX_STEPS=1` by default.** The agent makes one round of tool calls and then answers, which keeps latency and token cost low; the prompts are tuned for this. Raise it for multi-hop research with stronger models.
+- **Short memory.** Only the previous message is sent as conversation context (`MemoryService(max_recent_messages=2)`), which keeps prompts small enough for local models.
+- Responses are not streamed yet.
 
-### Research Agent
+## Roadmap
 
-Acts as the reasoning engine.
+- Streaming responses
+- Citation verification (check that every cited link came from a tool result)
+- Provider fallback (for example Groq, then Hugging Face)
+- PostgreSQL for deployment, and exporting reports to PDF
 
-It decides:
+## License
 
-* what information is required,
-* which tools to call,
-* when to stop searching,
-* and how to synthesize the final response.
-
----
-
-### Tools
-
-Each tool performs one specialized task.
-
-Examples:
-
-* arXiv search
-* GitHub search
-* Web search
-
-Tools remain independent so new capabilities can be added without modifying the agent.
-
----
-
-### LiteLLM Provider Layer
-
-Separates application logic from model providers.
-
-Changing from Groq to Ollama or OpenAI only requires updating configuration rather than rewriting the backend.
-
----
-
-# Future Improvements
-
-* Streaming responses
-* Multi-provider fallback
-* Citation verification
-* Saved reports
-* PDF export
-* User authentication
-* Conversation sharing
-* Research summarization
-
----
-
-# Deployment
-
-Frontend:
-
-* Vercel
-
-Backend:
-
-* Render
-
-Database:
-
-* SQLite (development)
-* PostgreSQL (future)
-
----
-
-# License
-
-MIT License
-
----
-
-
-
+[MIT](LICENSE)

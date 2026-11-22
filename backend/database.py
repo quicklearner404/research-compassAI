@@ -1,20 +1,23 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
-# SQLite database file
-DATABASE_URL = "sqlite:///research_compass.db"
+from config import DATABASE_URL
 
-# Create the database engine
-engine = create_engine(
-    DATABASE_URL,
-    connect_args={"check_same_thread": False}
+connect_args = (
+    {"check_same_thread": False}
+    if DATABASE_URL.startswith("sqlite")
+    else {}
 )
 
-# Session factory
+engine = create_engine(
+    DATABASE_URL,
+    connect_args=connect_args,
+)
+
 SessionLocal = sessionmaker(
     autocommit=False,
     autoflush=False,
-    bind=engine
+    bind=engine,
 )
 
 # Base class for all database models
